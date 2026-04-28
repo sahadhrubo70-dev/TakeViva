@@ -2,12 +2,11 @@ let questions = [];
 let index = 0;
 let score = 0;
 
-// Interview start
 async function startInterview() {
     const file = document.getElementById("fileInput").files[0];
 
     if (!file) {
-        alert("Please upload a file first!");
+        alert("Upload a file first");
         return;
     }
 
@@ -23,8 +22,15 @@ async function startInterview() {
 
     const data = await res.json();
 
-    // Questions split (simple parsing)
-    questions = data.data.split("\n").filter(q => q.trim() !== "");
+    if (data.error) {
+        alert(data.error);
+        return;
+    }
+
+    // FIX: proper split
+    questions = data.questions
+        .split("\n")
+        .filter(q => q.trim() !== "");
 
     index = 0;
     score = 0;
@@ -32,45 +38,30 @@ async function startInterview() {
     showQuestion();
 }
 
-// Show question
 function showQuestion() {
     document.getElementById("question").innerText = questions[index];
-
     speak(questions[index]);
 }
 
-// Next question
 function nextQ() {
-    let answer = document.getElementById("answer").value.trim();
+    let answer = document.getElementById("answer").value;
 
-    // Simple scoring logic (basic AI-like check)
-    if (answer.length > 15) {
+    if (answer.trim().length > 10) {
         score++;
     }
 
     document.getElementById("answer").value = "";
-
     index++;
 
     if (index < questions.length) {
         showQuestion();
     } else {
-        showResult();
+        document.getElementById("result").innerText =
+            `Interview Done!\nScore: ${score}/${questions.length}`;
     }
 }
 
-// Final result
-function showResult() {
-    document.getElementById("question").innerText = "";
-    document.getElementById("result").innerText =
-        `🎯 Interview Finished!\nYour Score: ${score} / ${questions.length}`;
-}
-
-// Voice system
 function speak(text) {
-    const speech = new SpeechSynthesisUtterance(text);
-    speech.lang = "en-US";
-    speech.rate = 1;
-
-    window.speechSynthesis.speak(speech);
+    const msg = new SpeechSynthesisUtterance(text);
+    window.speechSynthesis.speak(msg);
 }
