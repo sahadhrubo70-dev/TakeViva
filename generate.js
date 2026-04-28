@@ -11,13 +11,21 @@ export default async function handler(req, res) {
     model: "gpt-4o-mini",
     messages: [
       {
+        role: "system",
+        content: "তুমি একজন কঠোর viva examiner।"
+      },
+      {
         role: "user",
-        content: "এই লেখার উপর ভিত্তি করে ১০টি viva প্রশ্ন তৈরি করো:\n" + text
+        content: `
+এই কনটেন্ট থেকে ৫টা viva প্রশ্ন তৈরি করো এবং প্রতিটির সাথে expected answer দাও:
+
+${text}
+        `
       }
     ]
   });
 
   res.status(200).json({
-    questions: response.choices[0].message.content
+    data: response.choices[0].message.content
   });
 }
