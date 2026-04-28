@@ -1,42 +1,76 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>TakeViva</title>
-</head>
-<body>
+let questions = [];
+let index = 0;
+let score = 0;
 
-<h2>AI Viva System</h2>
-
-<input type="file" id="fileInput">
-<button onclick="generate()">Generate Viva</button>
-
-<pre id="output"></pre>
-
-<script>
-async function generate() {
+// Interview start
+async function startInterview() {
     const file = document.getElementById("fileInput").files[0];
+
+    if (!file) {
+        alert("Please upload a file first!");
+        return;
+    }
+
     const text = await file.text();
 
     const res = await fetch("/api/generate", {
         method: "POST",
-        headers: {"Content-Type":"application/json"},
+        headers: {
+            "Content-Type": "application/json"
+        },
         body: JSON.stringify({ text })
     });
 
     const data = await res.json();
 
-    document.getElementById("output").innerText = data.questions;
+    // Questions split (simple parsing)
+    questions = data.data.split("\n").filter(q => q.trim() !== "");
 
-    speak(data.questions);
+    index = 0;
+    score = 0;
+
+    showQuestion();
 }
 
-// ভয়েস ফিচার
+// Show question
+function showQuestion() {
+    document.getElementById("question").innerText = questions[index];
+
+    speak(questions[index]);
+}
+
+// Next question
+function nextQ() {
+    let answer = document.getElementById("answer").value.trim();
+
+    // Simple scoring logic (basic AI-like check)
+    if (answer.length > 15) {
+        score++;
+    }
+
+    document.getElementById("answer").value = "";
+
+    index++;
+
+    if (index < questions.length) {
+        showQuestion();
+    } else {
+        showResult();
+    }
+}
+
+// Final result
+function showResult() {
+    document.getElementById("question").innerText = "";
+    document.getElementById("result").innerText =
+        `🎯 Interview Finished!\nYour Score: ${score} / ${questions.length}`;
+}
+
+// Voice system
 function speak(text) {
     const speech = new SpeechSynthesisUtterance(text);
     speech.lang = "en-US";
+    speech.rate = 1;
+
     window.speechSynthesis.speak(speech);
 }
-</script>
-
-</body>
-</html>
