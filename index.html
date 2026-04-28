@@ -1,1 +1,42 @@
-<h1>TakeViva</h1>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>TakeViva</title>
+</head>
+<body>
+
+<h2>AI Viva System</h2>
+
+<input type="file" id="fileInput">
+<button onclick="generate()">Generate Viva</button>
+
+<pre id="output"></pre>
+
+<script>
+async function generate() {
+    const file = document.getElementById("fileInput").files[0];
+    const text = await file.text();
+
+    const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ text })
+    });
+
+    const data = await res.json();
+
+    document.getElementById("output").innerText = data.questions;
+
+    speak(data.questions);
+}
+
+// ভয়েস ফিচার
+function speak(text) {
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.lang = "en-US";
+    window.speechSynthesis.speak(speech);
+}
+</script>
+
+</body>
+</html>
