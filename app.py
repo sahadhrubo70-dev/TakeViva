@@ -1,1 +1,95 @@
+import streamlit as st
+import google.generativeai as genai
+from PIL import Image
+import time
+from gtts import gTTS
+import base64
 
+# Gemini API Configuration
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+model = genai.GenerativeModel('gemini-1.5-flash')
+
+def speak_text(text):
+    tts = gTTS(text=text, lang='bn')
+    tts.save("speech.mp3")
+    with open("speech.mp3", "rb") as f:
+        data = f.read()
+        b64 = base64.b64encode(data).decode()
+        md = f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}">'
+        st.markdown(md, unsafe_allow_html=True)
+
+st.set_page_config(page_title="TakeViva", page_icon="🎙️")
+st.title("🎙️ TakeViva - আপনার পার্সোনাল ভাইভা বোর্ড")
+
+# Session State Initialization
+if 'score' not in st.session_state:
+    st.session_state.score = 0
+    st.session_state.q_index = 0
+    st.session_state.questions = []
+    st.session_state.start_time = None
+
+# File Upload Section
+uploaded_file = st.file_uploader("যেকোনো ফাইল বা অস্পষ্ট ছবি আপলোড করুন", type=['png', 'jpg', 'jpeg', 'pdf'])
+
+if uploaded_file and not st.session_state.questions:
+    if st.button("ভাইভা শুরু করুন"):
+        with st.spinner("ফাইল বিশ্লেষণ করা হচ্ছে..."):
+            img = Image.open(uploaded_file)
+            prompt = "এই ফাইলটি বিশ্লেষণ করে ১০টি ছোট প্রশ্ন তৈরি করো বাংলায়। শুধু প্রশ্নগুলো দাও।"
+            response = model.generate_content([prompt, img])
+            st.session_state.questions = [q for q in response.text.split('\n') if q.strip()][:10]
+            st.session_state.start_time = time.time()
+            st.rerun()
+
+# Viva Interaction Section
+if st.session_state.questions and st.session_state.q_index < 10:
+    q = st.session_state.questions[st.session_state.q_index]
+    
+    # Progress Bar
+    st.progress((st.session_state.q_index + 1) / 10)
+    st.subheader(f"প্রশ্ন {st.session_state.q_index + 1}: {q}")
+    
+    # Auto play question voice
+    if st.button("আবার শুনুন"):
+        speak_text(q)
+
+    # 1 Minute Timer Logic
+    elapsed_time = time.time() - st.session_state.start_time
+    remaining_time = max(0, 60 - int(elapsed_time))
+    st.warning(f"সময় বাকি: {remaining_time} সেকেন্ড")
+
+    if remaining_time <= 0:
+        st.error("সময় শেষ! পরবর্তী প্রশ্নে যাওয়া হচ্ছে।")
+        st.session_state.score -= 2
+        st.session_state.q_index += 1
+        st.session_state.start_time = time.time()
+        time.sleep(2)
+        st.rerun()
+
+    user_ans = st.text_input("আপনার উত্তর লিখুন:", key=f"input_{st.session_state.q_index}")
+    
+    if st.button("উত্তর জমা দিন"):
+        if user_ans:
+            check = model.generate_content(f"Q: {q}, Ans: {user_ans}. Is it correct? Answer in only 'Yes' or 'No'").text
+            if "Yes" in check:
+                st.session_state.score += 10
+                st.success("সঠিক উত্তর! +১০")
+            else:
+                st.session_state.score -= 2
+                st.error("ভুল উত্তর! -২ কাটা হলো।")
+        else:
+            st.session_state.score -= 2
+            st.warning("উত্তর না দেওয়ায় ২ নম্বর কাটা গেল।")
+        
+        st.session_state.q_index += 1
+        st.session_state.start_time = time.time()
+        time.sleep(1.5)
+        st.rerun()
+
+elif st.session_state.q_index >= 10:
+    st.balloons()
+    st.header(f"ভাইভা শেষ!")
+    st.success(f"আপনার মোট স্কোর: {st.session_state.score}")
+    if st.button("নতুন ভাইভা শুরু করুন"):
+        st.session_state.clear()
+        st.rerun()
