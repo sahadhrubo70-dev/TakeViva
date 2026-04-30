@@ -8,8 +8,7 @@ import base64
 # API Configuration
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # সঠিক মডেল খুঁজে নেওয়ার চেষ্টা
- model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+    model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception as e:
     st.error(f"Configuration Error: {e}")
 
@@ -41,19 +40,16 @@ if uploaded_file and not st.session_state.questions:
         with st.spinner("AI ছবি বিশ্লেষণ করছে..."):
             try:
                 img = Image.open(uploaded_file)
-                # মডেল কল করার সঠিক পদ্ধতি
                 prompt = "Analyze this content and generate 10 questions in Bengali. Line by line."
                 response = model.generate_content([prompt, img])
                 
-                # প্রশ্নগুলো লিস্টে নেওয়া
-                q_list = [q.strip() for q in response.text.split('\n') if len(q.strip()) > 10]
+                q_list = [q.strip() for q in response.text.split('\n') if len(q.strip()) > 5]
                 st.session_state.questions = q_list[:10]
                 st.session_state.start_time = time.time()
                 st.rerun()
             except Exception as e:
-                st.error(f"মডেল কাজ করছে না: {e}. আপনার API Key কি সঠিক রিজিয়নে আছে?")
+                st.error(f"Error: {e}")
 
-# ভাইভা ইন্টারঅ্যাকশন
 if st.session_state.questions and st.session_state.q_index < len(st.session_state.questions):
     q = st.session_state.questions[st.session_state.q_index]
     
@@ -63,7 +59,6 @@ if st.session_state.questions and st.session_state.q_index < len(st.session_stat
     if st.button("প্রশ্নটি শুনতে ক্লিক করুন"):
         speak_text(q)
 
-    # ১ মিনিট টাইমার
     elapsed = time.time() - st.session_state.start_time
     remaining = max(0, 60 - int(elapsed))
     
@@ -82,7 +77,7 @@ if st.session_state.questions and st.session_state.q_index < len(st.session_stat
     if st.button("উত্তর দিন"):
         if user_ans:
             with st.spinner("যাচাই হচ্ছে..."):
-                check = model.generate_content(f"Q: {q}\nAns: {user_ans}\nIs it correct? Yes/No").text
+                check = model.generate_content(f"Question: {q}\nAnswer: {user_ans}\nIs it correct? Reply only 'Yes' or 'No'.").text
                 if "Yes" in check or "yes" in check:
                     st.session_state.score += 10
                     st.success("সঠিক! +১০")
@@ -98,7 +93,7 @@ if st.session_state.questions and st.session_state.q_index < len(st.session_stat
         time.sleep(1)
         st.rerun()
 
-elif st.session_state.q_index >= 1:
+elif st.session_state.q_index >= 1 and st.session_state.q_index >= len(st.session_state.questions):
     st.balloons()
     st.header(f"ভাইভা শেষ! ফাইনাল স্কোর: {st.session_state.score}")
     if st.button("আবার শুরু করুন"):
